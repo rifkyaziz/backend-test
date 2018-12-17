@@ -75,12 +75,26 @@ class Product(db.Model):
             "user": self.get_user()
         }
 
+@app.cli.command()
+def seed():
+    user = User('admin@admin.com', 'secret')
+    db.session.add(user)
+    db.session.commit()
+
 @app.route('/api/login', methods = ['POST'])
 def login():
     req_data = request.get_json(force=True)
     if not req_data:
         return jsonify(message="Error, request data is not valid")
 
+    user = User.query.filter_by(email=req_data["email"]).first()
+    if not user:
+        return jsonify(message="Email {} doesn't exist".format(req_data["email"]))
+
+    verify = bcrypt.check_password_hash(user.password, req_data["password"])
+    if not verify:
+        return jsonify(message="Wrong password for email {}".format(req_data["email"]))
+    
     access_token = create_access_token(identity=req_data["email"])
     return jsonify(access_token = access_token)
 
